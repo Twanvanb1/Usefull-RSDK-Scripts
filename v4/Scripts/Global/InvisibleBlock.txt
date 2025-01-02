@@ -1,0 +1,479 @@
+// ----------------------------------
+// RSDK Project: General RSDK Objects
+// Script Description: Invisible Block Object
+// Script Author: Twanvanb1
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.size.x
+private alias object.value1 : object.size.y
+private alias object.value2 : object.hurtType
+private alias object.value3 : object.killTimerP1
+private alias object.value4 : object.killTimerP2
+private alias object.value5 : object.timer
+private alias object.value6 : object.hitboxLeft
+private alias object.value7 : object.hitboxTop
+private alias object.value8 : object.hitboxRight
+private alias object.value9 : object.hitboxBottom
+
+private alias 0 : INVISIBLEBLOCK_SOLID		// regular invis block
+private alias 1 : INVISIBLEBLOCK_EJECT_L	// ejects the player out (to the left)
+private alias 2 : INVISIBLEBLOCK_EJECT_R	// ejects the player out (to the right)
+private alias 3 : INVISIBLEBLOCK_KTE_UNSTICK	// get knuckles out of the wall if he's climbing
+private alias 4 : INVISIBLEBLOCK_TAILS_STUCK	// hi S1! forces tails out of an area
+private alias 5 : INVISIBLEBLOCK_FORCE_UNSTICK	// get out of the wall, now.
+private alias 6 : INVISIBLEBLOCK_HURT			// your fortune... is DEATH.
+
+// Hurt types
+private alias 0 : HURT_TYPE_NONE
+private alias 1 : HURT_TYPE_ALL
+private alias 2 : HURT_TYPE_BUBBLE
+private alias 3 : HURT_TYPE_FIRE
+private alias 4 : HURT_TYPE_LIGHTNING
+private alias 5 : HURT_TYPE_DEATH
+private alias 6 : HURT_TYPE_SPIKES
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+private alias object.interaction : player.interaction
+private alias object.tileCollisions	: player.tileCollisions
+private alias object.collisionMode : player.collisionMode
+private alias object.controlMode : player.controlMode
+private alias object.value1 : player.timer
+private alias object.value3	: player.drownTimer
+private alias object.value4	: player.drownLevel
+private alias object.animation : player.animation
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function InvisibleBlock_DebugDraw
+reserve function InvisibleBlock_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+// MPZ shortens this, to kill the player fast
+private value InvisibleBlock_killDelay = 8
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function InvisibleBlock_DebugDraw
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp0 -= 0x80000
+	temp1 -= 0x80000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 -= 0x100000
+	temp1 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+end function
+
+
+private function InvisibleBlock_DebugSpawn
+	CreateTempObject(TypeName[Invisible Block], 17, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+	object[tempObjectPos].size.x = 2
+	object[tempObjectPos].size.y = 2
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.hitboxLeft = object.size.x
+	object.hitboxLeft <<= 3
+	FlipSign(object.hitboxLeft)
+	object.hitboxTop = object.size.y
+	object.hitboxTop <<= 3
+	FlipSign(object.hitboxTop)
+
+	object.hitboxRight = object.size.x
+	object.hitboxRight <<= 3
+	object.hitboxBottom = object.size.y
+	object.hitboxBottom <<= 3
+
+	// Note: state is editable and is set via the editor
+	//
+	switch object.state
+	case INVISIBLEBLOCK_SOLID
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_SOLID, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				switch checkResult
+				case COL_NONE
+					object.hitboxLeft += 2
+					object.hitboxTop += 2
+					object.hitboxRight -= 2
+					object.hitboxBottom -= 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						player[currentPlayer].gravity = GRAVITY_GROUND
+					end if
+					
+					if currentPlayer == 0
+						object.killTimerP1 = 0
+					else
+						object.killTimerP2 = 0
+					end if
+					break
+					
+				case COL_BOTTOM
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						if currentPlayer == 0
+							object.killTimerP1++
+							if object.killTimerP1 > InvisibleBlock_killDelay
+								CallFunction(Player_Kill)
+							end if
+						else
+							object.killTimerP2++
+							if object.killTimerP2 > InvisibleBlock_killDelay
+								CallFunction(Player_Kill)
+							end if
+						end if
+					end if
+					break
+				end switch
+			end if
+		next
+		break
+
+	case INVISIBLEBLOCK_EJECT_L
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionRight
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos -= object.hitboxRight
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed > 0
+							player[currentPlayer].speed = 0
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case INVISIBLEBLOCK_EJECT_R
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos += object.hitboxLeft
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed < 0
+							player[currentPlayer].speed = 0
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+	case INVISIBLEBLOCK_KTE_UNSTICK
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			switch checkResult
+			case COL_LEFT
+			case COL_RIGHT
+				if player[currentPlayer].state == Player_State_Climb
+					player[currentPlayer].timer = 0
+					player[currentPlayer].animation = ANI_GLIDING_DROP
+					player[currentPlayer].state = Player_State_GlideDrop
+				end if
+			break
+			end switch
+		next
+		break
+	case INVISIBLEBLOCK_TAILS_STUCK
+		if player[SLOT_PLAYER2].type == TypeName[Player 2 Object]
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, 1, 4, 4, 4, 4)
+			if checkResult == true
+				object.timer++
+				if object.timer >= 240
+					player[SLOT_PLAYER2].state 		 	 = Player2_State_FlyToPlayer
+					player[SLOT_PLAYER2].xpos 			 = player[SLOT_PLAYER1].xpos
+					player[SLOT_PLAYER2].ypos 			 = screen.yoffset
+					player[SLOT_PLAYER2].ypos 			 -= 128
+					player[SLOT_PLAYER2].ypos 			 <<= 16
+					player[SLOT_PLAYER2].xvel 			 = 0
+					player[SLOT_PLAYER2].yvel 			 = 0
+					player[SLOT_PLAYER2].speed 		 	 = 0
+					player[SLOT_PLAYER2].tileCollisions  = false
+					player[SLOT_PLAYER2].interaction 	 = false
+					player[SLOT_PLAYER2].controlMode 	 = CONTROLMODE_P2
+					player[SLOT_PLAYER2].drownTimer 	 = 0
+					player[SLOT_PLAYER2].drownLevel 	 = 0
+				end if
+			else
+				object.timer = 0
+			end if
+		end if
+		break
+
+	case INVISIBLEBLOCK_FORCE_UNSTICK
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)	
+			BoxCollisionTest(C_SOLID, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult != false
+				player[currentPlayer].collisionMode = CMODE_FLOOR
+				if player[currentPlayer].state == Player_State_Climb
+					player[currentPlayer].timer = 0
+					player[currentPlayer].animation = ANI_GLIDING_DROP
+					player[currentPlayer].state = Player_State_GlideDrop
+				end if
+			end if
+		next
+		break
+
+	case INVISIBLEBLOCK_HURT
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)	
+			
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				switch object.hurtType
+				case HURT_TYPE_NONE
+				case HURT_TYPE_BUBBLE
+					// Nothing since there's no such thing as Player_BubbleHit LOL
+					break
+
+				case HURT_TYPE_ALL
+					CallFunction(Player_Hit)
+					break
+
+				case HURT_TYPE_FIRE
+					CallFunction(Player_FireHit)
+					break
+
+				case HURT_TYPE_LIGHTNING
+					CallFunction(Player_LightningHit)
+					break
+
+				case HURT_TYPE_DEATH
+					CallFunction(Player_Kill)
+					break
+
+				case HURT_TYPE_SPIKES
+					CallFunction(Player_SpikeHit)
+					break
+				end switch
+			end if
+		next
+		break
+
+	end switch
+end event
+			
+event ObjectDraw
+	if player[0].type == TypeName[Debug Mode]
+		DrawSpriteXY(object.state, object.xpos, object.ypos)
+	end if
+end event
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Editor.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 65) // Robotnik
+	SpriteFrame(-8, -8, 16, 16, 18, 65) // Arrow Left
+	SpriteFrame(-8, -8, 16, 16, 1, 82) // Arrow Right
+	SpriteFrame(-8, -8, 16, 16, 18, 82) // Knuckles's life icon
+	SpriteFrame(-8, -8, 16, 16, 1, 99) // Tails's life icon
+	SpriteFrame(-8, -8, 16, 16, 18, 99) // Sonic's life icon
+	SpriteFrame(-8, -8, 16, 16, 1, 116) // Green Robotnik
+
+	SpriteFrame(0, 0, 3, 4, 195, 130) // tickMark
+	
+	foreach (TypeName[Invisible Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+	
+	//I Don't know where 
+	CheckCurrentStageFolder("MCZ01")
+	temp0 = checkResult
+	CheckCurrentStageFolder("MCZ02")
+	temp0 |= checkResult
+	if temp0 == true
+		InvisibleBlock_killDelay = 1
+	end if
+
+	SetTableValue(TypeName[Invisible Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(InvisibleBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(InvisibleBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+private alias 0 : EDIT_VAR_SIZE_X
+private alias 1 : EDIT_VAR_SIZE_Y
+private alias 2 : EDIT_VAR_TYPE
+private alias 3 : EDIT_VAR_HURT_TYPE
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // size.x
+			checkResult = object.size.x
+			break
+			
+		case 1 // size.y
+			checkResult = object.size.y
+			break
+			
+		case 2 // type
+			checkResult = object.state
+			break
+
+		case 3 // hurtType
+			checkResult = object.hurtType
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // size.x
+			object.size.x = editor.variableValue
+			break
+			
+		case 1 // size.y
+			object.size.y = editor.variableValue
+			break
+			
+		case 2 // type
+			object.state = editor.variableValue
+			break
+
+		case 3 // hurtType
+			object.hurtType = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+private alias object.value16 : object.drawPos.x
+private alias object.value18 : object.drawPos.y
+
+private alias object.value19 : object.tickMark.x
+private alias object.value20 : object.tickMark.y
+
+event RSDKDraw
+	temp0 = object.size.x; temp0 <<= 3
+	temp1 = object.size.y; temp1 <<= 3
+	temp2 = temp0
+	temp3 = temp1
+	CallFunction(EditorHelpers_DrawHitbox)
+
+	object.tickMark.x = temp0
+	object.tickMark.x <<= 16
+	object.tickMark.y = temp1
+	object.tickMark.y <<= 16
+
+	DrawSpriteXY(object.state, object.xpos, object.ypos)
+
+	CheckGreater(object.size.x, 0)
+	temp0 = checkResult
+	CheckGreater(object.size.y, 0)
+	temp0 |= checkResult
+	if temp0 == true
+		object.drawPos.x = object.xpos; object.drawPos.x -= object.tickMark.x
+		object.drawPos.y = object.ypos; object.drawPos.y -= object.tickMark.y
+
+		object.direction = FLIP_NONE
+		DrawSpriteFX(7, FX_FLIP, object.drawPos.x, object.drawPos.y)
+
+		object.drawPos.x = object.xpos; object.drawPos.x += object.tickMark.x
+		object.direction = FLIP_X
+		DrawSpriteFX(7, FX_FLIP, object.drawPos.x, object.drawPos.y)
+
+		object.drawPos.y = object.ypos; object.drawPos.y += object.tickMark.y
+		object.direction = FLIP_XY
+		DrawSpriteFX(7, FX_FLIP, object.drawPos.x, object.drawPos.y)
+
+		object.drawPos.x = object.xpos; object.drawPos.x -= object.tickMark.x
+		object.direction = FLIP_Y
+		DrawSpriteFX(7, FX_FLIP, object.drawPos.x, object.drawPos.y)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Editor.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 65) // Robotnik
+	SpriteFrame(-8, -8, 16, 16, 18, 65) // Arrow Left
+	SpriteFrame(-8, -8, 16, 16, 1, 82) // Arrow Right
+	SpriteFrame(-8, -8, 16, 16, 18, 82) // Knuckles's life icon
+	SpriteFrame(-8, -8, 16, 16, 1, 99) // Tails's life icon
+	SpriteFrame(-8, -8, 16, 16, 18, 99) // Sonic's life icon
+	SpriteFrame(-8, -8, 16, 16, 1, 116) // Green Robotnik
+
+	SpriteFrame(0, 0, 3, 4, 18, 116) // tickMark
+
+	AddEditorVariable("size.x")
+	AddEditorVariable("size.y")
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Solid", 0)
+	AddEnumVariable("Eject left", 1)
+	AddEnumVariable("Eject right", 2)
+	AddEnumVariable("kuckles Unstick", 3)
+	AddEnumVariable("tails Stick", 4)
+	AddEnumVariable("force Unstick", 5)
+	AddEnumVariable("hurt", 6)
+
+	AddEditorVariable("hurtType")
+	SetActiveVariable("hurtType")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("All", 1)
+	AddEnumVariable("Aqua (unused)", 2)
+	AddEnumVariable("Flame", 3)
+	AddEnumVariable("Thunder", 4)
+	AddEnumVariable("Kill", 5)
+	AddEnumVariable("Spike", 6)
+end event

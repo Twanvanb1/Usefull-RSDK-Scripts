@@ -1,0 +1,229 @@
+// ----------------------------------
+// RSDK Project:  General RSDK Objects
+// Script Description: BG Switch
+// Script Author: Twanvanb1
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+
+private alias object.propertyValue : object.multipleBG
+
+private alias object.value0 : object.size.x
+private alias object.value1 : object.size.y
+private alias object.value2 : object.bgID
+private alias object.value3 : object.bgID2
+
+private alias object.value6 : object.hitboxLeft
+private alias object.value7 : object.hitboxTop
+private alias object.value8 : object.hitboxRight
+private alias object.value9 : object.hitboxBottom
+
+private alias object.state : object.activeLayer
+private alias object.scale : object.activeLayer2
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.hitboxLeft = object.size.x
+	FlipSign(object.hitboxLeft)
+	
+	object.hitboxTop = object.size.y
+	FlipSign(object.hitboxTop)
+
+	object.hitboxRight = object.size.x
+	object.hitboxBottom = object.size.y
+
+	arrayPos0 = object.activeLayer
+    arrayPos1 = object.activeLayer2
+	
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			Stage.ActiveLayer[arrayPos0] = object.bgID
+			if object.multipleBG == true	
+				Stage.ActiveLayer[arrayPos1] = object.bgID2
+			end if
+		end if
+	next
+end event
+
+event ObjectStartup
+	foreach (TypeName[BG Switch], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+// ========================
+// Editor Events
+// ========================
+
+private alias 0 : VAR_ID_BG_ID
+private alias 1 : VAR_ID_BG_ID2
+private alias 2 : EDIT_VAR_WIDTH
+private alias 3 : EDIT_VAR_HEIGHT
+private alias 4 : BOOL_MULTI_BGS
+private alias 5 : EDIT_VAR_ACTIVELAYER
+private alias 6 : EDIT_VAR_ACTIVELAYER2
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+
+		case VAR_ID_BG_ID
+			checkResult = object.bgID
+			break
+
+		case VAR_ID_BG_ID2
+			checkResult = object.bgID2
+			break
+		
+		case EDIT_VAR_WIDTH
+			checkResult = object.size.x
+			break
+
+		case EDIT_VAR_HEIGHT
+			checkResult = object.size.y
+			break		
+
+		case BOOL_MULTI_BGS
+			checkResult = object.multipleBG
+			break
+
+		case EDIT_VAR_ACTIVELAYER
+			checkResult = object.activeLayer
+			break
+
+		case EDIT_VAR_ACTIVELAYER2
+			checkResult = object.activeLayer2
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+
+		case VAR_ID_BG_ID
+			object.bgID = editor.variableValue
+			break
+
+		case VAR_ID_BG_ID2
+			object.bgID2 = editor.variableValue
+			break
+
+		case EDIT_VAR_WIDTH
+			object.size.x = editor.variableValue
+			break
+
+		case EDIT_VAR_HEIGHT
+			object.size.y = editor.variableValue
+			break
+
+		case BOOL_MULTI_BGS
+			object.multipleBG = editor.variableValue
+			break
+		
+		case EDIT_VAR_ACTIVELAYER
+			object.activeLayer = editor.variableValue
+			break
+
+		case EDIT_VAR_ACTIVELAYER2
+			object.activeLayer2 = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	temp0 = object.ixpos; temp0 -= object.size.x
+	temp0 <<= 16
+	temp1 = object.iypos; temp1 -= object.size.y 
+	temp1 <<= 16
+	temp2 = object.size.x; temp2 <<= 1
+	
+	temp3 = object.size.y; temp3 <<= 1
+
+	CheckEqual(object.activeLayer, 3)
+	temp4 = checkResult
+	CheckEqual(object.activeLayer, 2)
+	temp4 |= checkResult
+
+	CheckEqual(object.activeLayer2, 3)
+	temp4 |= checkResult
+	CheckEqual(object.activeLayer2, 2)
+	temp4 |= checkResult
+
+	if temp4 == false
+		DrawRectOutline(temp0, temp1, temp2, temp3, 0xFF, 0xFF, 0, 255)
+	else
+		DrawRectOutline(temp0, temp1, temp2, temp3, 0xFF, 0xFF, 0xFF, 255)
+	end if
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Editor.gif")
+	SpriteFrame(-16, -16, 32, 32, 32, 32) // BG Switch
+	
+	AddEditorVariable("BGiD")
+	SetActiveVariable("BGiD")
+	AddEnumVariable("Foreground", 0)
+	AddEnumVariable("Background 1", 1)
+	AddEnumVariable("Background 2", 2)
+	AddEnumVariable("Background 3", 3)
+	AddEnumVariable("Background 4", 4)
+	AddEnumVariable("Background 5", 5)
+	AddEnumVariable("Background 6", 6)
+	AddEnumVariable("Background 7", 7)
+	AddEnumVariable("Background 8", 8)
+	AddEnumVariable("None", 9)
+
+	AddEditorVariable("BGiD2")
+	SetActiveVariable("BGiD2")
+	AddEnumVariable("Foreground", 0)
+	AddEnumVariable("Background 1", 1)
+	AddEnumVariable("Background 2", 2)
+	AddEnumVariable("Background 3", 3)
+	AddEnumVariable("Background 4", 4)
+	AddEnumVariable("Background 5", 5)
+	AddEnumVariable("Background 6", 6)
+	AddEnumVariable("Background 7", 7)
+	AddEnumVariable("Background 8", 8)
+	AddEnumVariable("None", 9)
+
+	AddEditorVariable("Width")
+	SetActiveVariable("Width")
+	AddEditorVariable("Height")
+	SetActiveVariable("Height")
+
+	AddEditorVariable("multipleBG")
+	SetActiveVariable("multipleBG")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("activeLayer")
+	SetActiveVariable("activeLayer")
+	AddEnumVariable("0", 0)
+	AddEnumVariable("1", 1)
+	AddEnumVariable("2", 2)
+	AddEnumVariable("3", 3)
+
+	AddEditorVariable("activeLayer2")
+	SetActiveVariable("activeLayer2")
+	AddEnumVariable("0", 0)
+	AddEnumVariable("1", 1)
+	AddEnumVariable("2", 2)
+	AddEnumVariable("3", 3)
+end event
