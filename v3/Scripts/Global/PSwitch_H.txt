@@ -16,6 +16,8 @@
 #alias object.value5 : object.drawOrderL
 #alias object.value6 : object.onGround
 
+#alias object.Type : Player.Type
+
 // Gravity
 #alias 0	:	GRAVITY_GROUND
 #alias 1	:	GRAVITY_AIR
@@ -25,33 +27,33 @@
 // ========================
 
 sub ObjectPlayerInteraction
-	CheckEqual(object.onGround, false)
-	TempValue0 = checkResult
-	CheckEqual(player.gravity, GRAVITY_GROUND)
-	TempValue0 |= checkResult
-	
-	if TempValue0 == true
-		PlayerObjectCollision(C_TOUCH, object.extendTop, -12, object.extendBottom, 12)
-		if checkResult == true
-			if player.YVelocity > 0
-				GetBit(TempValue0, object.propertyValue, 6)
-				if TempValue0 == false
-					player.collisionPlane = object.planeL
+		CheckEqual(object.onGround, false)
+		TempValue0 = checkResult
+		CheckEqual(player.gravity, GRAVITY_GROUND)
+		TempValue0 |= checkResult
+		
+		if TempValue0 == true
+			PlayerObjectCollision(C_TOUCH, object.extendTop, -12, object.extendBottom, 12)
+			if checkResult == true
+				if player.YVelocity > 0
+					GetBit(TempValue0, object.propertyValue, 6)
+					if TempValue0 == false
+						player.collisionPlane = object.planeL
+					end if
+					Player.DrawOrder = object.drawOrderL
+				else
+					GetBit(TempValue0, object.propertyValue, 6)
+					if TempValue0 == false
+						player.collisionPlane = object.planeR
+					end if
+					Player.DrawOrder = object.drawOrderR
 				end if
-				Player.DrawOrder = object.drawOrderL
-			else
-				GetBit(TempValue0, object.propertyValue, 6)
-				if TempValue0 == false
-					player.collisionPlane = object.planeR
-				end if
-				Player.DrawOrder = object.drawOrderR
 			end if
 		end if
-	end if
 end sub
 
 sub ObjectDraw
-	if Stage.DebugMode == true
+	if Player[0].Type == TypeName[Debug Mode]
 		TempValue1 = object.propertyValue
 		TempValue1 &= 3
 		TempValue1 += 2
