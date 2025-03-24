@@ -109,17 +109,24 @@ end function
 // ========================
 
 event ObjectUpdate
+	
 	object.hitboxLeft = object.size.x
 	object.hitboxLeft <<= 3
+	object.hitboxLeft += 8
 	FlipSign(object.hitboxLeft)
+
 	object.hitboxTop = object.size.y
 	object.hitboxTop <<= 3
+	object.hitboxTop += 8
 	FlipSign(object.hitboxTop)
 
 	object.hitboxRight = object.size.x
 	object.hitboxRight <<= 3
+	object.hitboxRight += 8
+
 	object.hitboxBottom = object.size.y
 	object.hitboxBottom <<= 3
+	object.hitboxBottom += 8
 
 	// Note: state is editable and is set via the editor
 	//
@@ -403,8 +410,14 @@ private alias object.value19 : object.tickMark.x
 private alias object.value20 : object.tickMark.y
 
 event RSDKDraw
-	temp0 = object.size.x; temp0 <<= 3
-	temp1 = object.size.y; temp1 <<= 3
+	temp0 = object.size.x
+	temp0 <<= 3
+	temp0 += 8
+
+	temp1 = object.size.y
+	temp1 <<= 3
+	temp1 += 8
+
 	temp2 = temp0
 	temp3 = temp1
 	CallFunction(EditorHelpers_DrawHitbox)
