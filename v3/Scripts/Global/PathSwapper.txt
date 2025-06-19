@@ -1,6 +1,6 @@
 // ----------------------------------
-// RSDK Project: Sonic CD's scrapped rounds
-// Script Description: Plane Sw H Object
+// RSDK Project:  General RSDKv3 Objects
+// Script Description: Plane Sw V Object
 // Script Author: Twanvanb1
 // ----------------------------------
 
@@ -10,10 +10,10 @@
 
 #alias object.value0 : object.extendTop
 #alias object.value1 : object.extendBottom
-#alias object.value2 : object.planeR
-#alias object.value3 : object.planeL
-#alias object.value4 : object.drawOrderR
-#alias object.value5 : object.drawOrderL
+#alias object.value2 : object.planeRD
+#alias object.value3 : object.planeLU
+#alias object.value4 : object.drawOrderRD
+#alias object.value5 : object.drawOrderLU
 #alias object.value6 : object.onGround
 
 #alias object.Type : Player.Type
@@ -23,36 +23,45 @@
 #alias 1	:	GRAVITY_AIR
 
 // ========================
-// Subs
+// subs
 // ========================
 
 sub ObjectPlayerInteraction
-		CheckEqual(object.onGround, false)
-		TempValue0 = checkResult
-		CheckEqual(player.gravity, GRAVITY_GROUND)
-		TempValue0 |= checkResult
-		
-		if TempValue0 == true
+	CheckEqual(object.onGround, false)
+	TempValue0 = checkResult
+	CheckEqual(player.gravity, GRAVITY_GROUND)
+	TempValue0 |= checkResult
+	
+	if TempValue0 == true
+		getBit(TempValue1, object.propertyValue, 6)
+		if TempValue1 == false
+			PlayerObjectCollision(C_TOUCH, -12, object.extendTop, 12, object.extendBottom)
+			if checkResult == true
+				if player.XVelocity > 0
+					player.collisionPlane = object.planeLU
+					Player.DrawOrder = object.drawOrderLU
+				else
+					player.collisionPlane = object.planeRD
+					Player.DrawOrder = object.drawOrderRD
+				end if
+			end if
+		else
 			PlayerObjectCollision(C_TOUCH, object.extendTop, -12, object.extendBottom, 12)
 			if checkResult == true
 				if player.YVelocity > 0
-					GetBit(TempValue0, object.propertyValue, 6)
-					if TempValue0 == false
-						player.collisionPlane = object.planeL
-					end if
-					Player.DrawOrder = object.drawOrderL
+					player.collisionPlane = object.planeLU
+					Player.DrawOrder = object.drawOrderLU
 				else
-					GetBit(TempValue0, object.propertyValue, 6)
-					if TempValue0 == false
-						player.collisionPlane = object.planeR
-					end if
-					Player.DrawOrder = object.drawOrderR
+					player.collisionPlane = object.planeRD
+					Player.DrawOrder = object.drawOrderRD
 				end if
 			end if
 		end if
+	end if
 end sub
 
 sub ObjectDraw
+	// Only draw if the player has debug mode turned on
 	if Player[0].Type == TypeName[Debug Mode]
 		TempValue1 = object.propertyValue
 		TempValue1 &= 3
@@ -61,31 +70,50 @@ sub ObjectDraw
 		TempValue0 <<= TempValue1
 		TempValue1 = TempValue0
 		TempValue0 <<= 19
-		FlipSign(TempValue0)
-		TempValue0 += object.xpos
-		TempValue0 += 0x80000
 		GetBit(TempValue2, object.propertyValue, 7)
 		TempValue3 = object.propertyValue
 		TempValue3 >>= 2
 		TempValue3 &= 15
-		GetBit(TempValue4, object.propertyValue, 6)
-		if TempValue4 == true
-			TempValue3 >>= 2
-			TempValue3 += 16
-		end if
-		
-		TempValue4 = 0
-		while TempValue4 < TempValue1
-			if TempValue2 == true
-				DrawSpriteXY(20, TempValue0, object.ypos)
-			end if
-			DrawSpriteXY(TempValue3, TempValue0, object.ypos)
-			TempValue0 += 0x100000
-			TempValue4++
-		loop
 
-		if TempValue1 == 0
-			DrawSprite(TempValue3)
+		GetBit(TempValue5, object.propertyValue, 6)
+		if TempValue5 == false
+
+			FlipSign(TempValue0)
+			TempValue0 += object.ypos
+			TempValue0 += 0x80000
+
+			TempValue4 = 0
+			while TempValue4 < TempValue1
+				if TempValue2 == true
+					DrawSpriteXY(20, object.xpos, TempValue0)
+				end if
+				DrawSpriteXY(TempValue3, object.xpos, TempValue0)
+				TempValue0 += 0x100000
+				TempValue4++
+			loop
+
+			if TempValue1 == 0
+				DrawSprite(TempValue3)
+			end if
+
+		else
+			FlipSign(TempValue0)
+			TempValue0 += object.xpos
+			TempValue0 += 0x80000
+			TempValue4 = 0
+			while TempValue4 < TempValue1
+				if TempValue2 == true
+					DrawSpriteXY(20, TempValue0, object.ypos)
+				end if
+				DrawSpriteXY(TempValue3, TempValue0, object.ypos)
+				TempValue0 += 0x100000
+				TempValue4++
+			loop
+
+			if TempValue1 == 0
+				DrawSprite(TempValue3)
+			end if
+
 		end if
 	end if
 end sub
@@ -132,12 +160,12 @@ sub ObjectStartup
 		TempValue0++
 		TempValue1 += 17
 	loop
-
+	
 	SpriteFrame(-8, -8, 16, 16, 103, 65) // #20 - back
 
 	ArrayPos0 = 32
 	while ArrayPos0 < 1056
-		if Object[ArrayPos0].Type == TypeName[Plane Sw H]
+		if Object[ArrayPos0].Type == TypeName[Path Swapper]
 			TempValue0 = object[arrayPos0].propertyValue
 			TempValue0 &= 3
 			TempValue0 += 2
@@ -146,13 +174,14 @@ sub ObjectStartup
 			object[arrayPos0].extendTop <<= 3
 			object[arrayPos0].extendBottom = object[arrayPos0].extendTop
 			FlipSign(object[arrayPos0].extendTop)
-			GetBit(object[arrayPos0].planeR, object[arrayPos0].propertyValue, 2)
-			GetBit(object[arrayPos0].planeL, object[arrayPos0].propertyValue, 3)
+			
+			GetBit(object[arrayPos0].planeRD, object[arrayPos0].propertyValue, 2)
+			GetBit(object[arrayPos0].planeLU, object[arrayPos0].propertyValue, 3)
 	
-			GetBit(object[arrayPos0].drawOrderR, object[arrayPos0].propertyValue, 4)
-			object[arrayPos0].drawOrderR += 4
-			GetBit(object[arrayPos0].drawOrderL, object[arrayPos0].propertyValue, 5)
-			object[arrayPos0].drawOrderL += 4
+			GetBit(object[arrayPos0].drawOrderRD, object[arrayPos0].propertyValue, 4)
+			object[arrayPos0].drawOrderRD += 4
+			GetBit(object[arrayPos0].drawOrderLU, object[arrayPos0].propertyValue, 5)
+			object[arrayPos0].drawOrderLU += 4
 	
 			GetBit(object[arrayPos0].onGround, object[arrayPos0].propertyValue, 7)
 		end if
@@ -161,7 +190,7 @@ sub ObjectStartup
 end sub
 
 // ========================
-// Editor Subs & Aliases
+// Editor subs & Aliases
 // ========================
 
 #alias 0 : VAR_ID_SIZE
@@ -169,7 +198,7 @@ end sub
 #alias 2 : VAR_ID_PLANER
 #alias 3 : VAR_ID_DRAWL
 #alias 4 : VAR_ID_DRAWR
-#alias 5 : VAR_ID_ONLYDRAWORDER
+#alias 5 : VAR_ID_DIRECTION
 #alias 6 : VAR_ID_ONGROUND
 
 
@@ -201,14 +230,13 @@ sub RSDKEdit
 			GetBit(checkResult, object.propertyValue, 5)
 			break
 			
-		case VAR_ID_ONLYDRAWORDER // onlyDrawOrder
+		case VAR_ID_DIRECTION // direction
 			GetBit(checkResult, object.propertyValue, 6)
 			break
 			
 		case VAR_ID_ONGROUND // onGround
 			GetBit(checkResult, object.propertyValue, 7)
 			break
-			
 		end switch
 	else
 		switch editor.variableID
@@ -246,7 +274,7 @@ sub RSDKEdit
 			SetBit(object.propertyValue, 5, checkResult)
 			break
 			
-		case VAR_ID_ONLYDRAWORDER // onlyDrawOrder
+		case VAR_ID_DIRECTION // direction
 			CheckNotEqual(editor.variableValue, false)
 			SetBit(object.propertyValue, 6, checkResult)
 			break
@@ -269,31 +297,50 @@ sub RSDKDraw
 	TempValue0 <<= TempValue1
 	TempValue1 = TempValue0
 	TempValue0 <<= 19
-	FlipSign(TempValue0)
-	TempValue0 += object.xpos
-	TempValue0 += 0x80000
 	GetBit(TempValue2, object.propertyValue, 7)
 	TempValue3 = object.propertyValue
 	TempValue3 >>= 2
 	TempValue3 &= 15
-	GetBit(TempValue4, object.propertyValue, 6)
-	if TempValue4 == true
-		TempValue3 >>= 2
-		TempValue3 += 16
-	end if
 
-	TempValue4 = 0
-	while TempValue4 < TempValue1
-		if TempValue2 == true
-			DrawSpriteXY(20, TempValue0, object.ypos)
+	GetBit(TempValue5, object.propertyValue, 6)
+	if TempValue5 == false
+
+		FlipSign(TempValue0)
+		TempValue0 += object.ypos
+		TempValue0 += 0x80000
+
+		TempValue4 = 0
+		while TempValue4 < TempValue1
+			if TempValue2 == true
+				DrawSpriteXY(20, object.xpos, TempValue0)
+			end if
+			DrawSpriteXY(TempValue3, object.xpos, TempValue0)
+			TempValue0 += 0x100000
+			TempValue4++
+		loop
+
+		if TempValue1 == 0
+			DrawSprite(TempValue3)
 		end if
-		DrawSpriteXY(TempValue3, TempValue0, object.ypos)
-		TempValue0 += 0x100000
-		TempValue4++
-	loop
 
-	if TempValue1 == 0
-		DrawSprite(TempValue3)
+	else
+		FlipSign(TempValue0)
+		TempValue0 += object.xpos
+		TempValue0 += 0x80000
+		TempValue4 = 0
+		while TempValue4 < TempValue1
+			if TempValue2 == true
+				DrawSpriteXY(20, TempValue0, object.ypos)
+			end if
+			DrawSpriteXY(TempValue3, TempValue0, object.ypos)
+			TempValue0 += 0x100000
+			TempValue4++
+		loop
+
+		if TempValue1 == 0
+			DrawSprite(TempValue3)
+		end if
+
 	end if
 end sub
 
@@ -350,30 +397,30 @@ sub RSDKLoad
 	AddEnumVariable("16 Nodes", 2)
 	AddEnumVariable("32 Nodes", 3)
 
-	AddEditorVariable("collisionPlaneU")
-	SetActiveVariable("collisionPlaneU")
+	AddEditorVariable("collisionPlaneL")
+	SetActiveVariable("collisionPlaneL")
 	AddEnumVariable("Plane A", 0)
 	AddEnumVariable("Plane B", 1)
 
-	AddEditorVariable("collisionPlaneD")
-	SetActiveVariable("collisionPlaneD")
+	AddEditorVariable("collisionPlaneR")
+	SetActiveVariable("collisionPlaneR")
 	AddEnumVariable("Plane A", 0)
 	AddEnumVariable("Plane B", 1)
 
-	AddEditorVariable("drawOrderU")
-	SetActiveVariable("drawOrderU")
+	AddEditorVariable("drawOrderL")
+	SetActiveVariable("drawOrderL")
 	AddEnumVariable("Low Layer", 0)
 	AddEnumVariable("High Layer", 1)
 
-	AddEditorVariable("drawOrderD")
-	SetActiveVariable("drawOrderD")
+	AddEditorVariable("drawOrderR")
+	SetActiveVariable("drawOrderR")
 	AddEnumVariable("Low Layer", 0)
 	AddEnumVariable("High Layer", 1)
 
-	AddEditorVariable("onlyDrawOrder")
-	SetActiveVariable("onlyDrawOrder")
-	AddEnumVariable("false", false)
-	AddEnumVariable("true", true)
+	AddEditorVariable("subType")
+	SetActiveVariable("subType")
+	AddEnumVariable("vertical", 0)
+	AddEnumVariable("horizontal", 1)
 
 	AddEditorVariable("onGround")
 	SetActiveVariable("onGround")
